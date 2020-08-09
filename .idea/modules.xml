@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/domain-library.iml" filepath="$PROJECT_DIR$/.idea/modules/domain-library.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/project-chat-gateway.iml" filepath="$PROJECT_DIR$/.idea/modules/project-chat-gateway.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/project-http-microservice.iml" filepath="$PROJECT_DIR$/.idea/modules/project-http-microservice.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/project-telegram-microservice.iml" filepath="$PROJECT_DIR$/.idea/modules/project-telegram-microservice.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/scala-microservices.iml" filepath="$PROJECT_DIR$/.idea/modules/scala-microservices.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/scala-microservices-build.iml" filepath="$PROJECT_DIR$/.idea/modules/scala-microservices-build.iml" />
+    </modules>
+  </component>
+</project>

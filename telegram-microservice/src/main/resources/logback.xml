@@ -1,0 +1,35 @@
+<configuration>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%date{ISO8601} %-5level %logger{36} %X{akkaSource} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>target/telegram-adapter.log</file>
+        <encoder>
+            <pattern>%date{ISO8601} %-5level %logger{36} %X{akkaSource} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="ALL">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+    <logger name="akka.io.SimpleDnsManager" level="INFO" />
+    <logger name="akka.actor.LocalActorRefProvider" level="WARN" />
+    <logger name="akka.serialization" level="WARN" />
+    <logger name="akka.io.TcpListener" level="WARN" />
+    <logger name="spray.can.server" level="WARN" />
+    <logger name="io.netty" level="WARN" />
+    <logger name="netty" level="WARN" />
+    <logger name="akka.stream.impl" level="WARN" />
+    <logger name="akka.io.TcpOutgoingConnection" level="WARN" />
+    <logger name="akka.http.impl.engine.client" level="WARN" />
+    <logger name="akka.http.impl.engine.client.PoolGateway" level="WARN" />
+    <logger name="akka.actor.TimerScheduler" level="WARN" />
+    <logger name="akka.actor.ActorSystemImpl" level="WARN" />
+    <logger name="akka.serialization" level="ERROR" />
+    <logger name="org.apache.http" level="INFO" />
+</configuration>
