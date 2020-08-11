@@ -2,7 +2,7 @@ package kz.coders.chat.gateway.APIs
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import kz.coders.chat.gateway.util.RestClientImpl.get
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.parse
@@ -17,8 +17,8 @@ object Weather {
   case class WeatherResponseBody(id: Int, main: String, description: String)
   case class MainResponseBody(temp: Int, feels_like: Int)
 
-  val config = ConfigFactory.load()
-  val apiKey = config.getString("application.weatherApiKey")
+  val config: Config = ConfigFactory.load()
+  val apiKey: String = config.getString("application.weatherApiKey")
 
   def getWeatherByCity(city: String)(implicit system: ActorSystem,
                                      materializer: Materializer,

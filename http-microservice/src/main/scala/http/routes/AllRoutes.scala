@@ -1,6 +1,5 @@
 package http.routes
 
-import actors.ResponseActor
 import actors.PerRequest.PerRequestActor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.server.Directives._
@@ -18,11 +17,12 @@ object AllRoutes {
   case class BasicRequest(message: String) extends Request
 }
 
-class AllRoutes(publisher: ActorRef)(implicit ex: ExecutionContext,
-                                     system: ActorSystem)
+class AllRoutes(publisher: ActorRef, routingKey: String)(
+    implicit ex: ExecutionContext,
+    system: ActorSystem)
     extends Json4sSupport {
   implicit val formats: DefaultFormats.type = DefaultFormats
-  implicit val serialazation: Serialization = Serialization
+  implicit val serialization: Serialization = Serialization
   implicit val timeout: Timeout = 5.seconds
 
   val handlers: Route = pathPrefix("api") {
@@ -30,7 +30,7 @@ class AllRoutes(publisher: ActorRef)(implicit ex: ExecutionContext,
       path("talk") {
         post {
           entity(as[BasicRequest]) { body => ctx =>
-            completeRequest(body.message, body, ctx, ResponseActor.props())
+            completeRequest(body.message, body, ctx)
           }
         }
       }
@@ -39,12 +39,16 @@ class AllRoutes(publisher: ActorRef)(implicit ex: ExecutionContext,
 
   def completeRequest(bodyMessage: String,
                       body: Request,
-                      ctx: RequestContext,
-                      props: Props): Future[RouteResult] = {
+                      ctx: RequestContext): Future[RouteResult] = {
     val promise = Promise[RouteResult]
     system.actorOf(
       Props(
-        new PerRequestActor(bodyMessage, body, props, promise, ctx, publisher)))
+        new PerRequestActor(routingKey,
+                            bodyMessage,
+                            body,
+                            promise,
+                            ctx,
+                            publisher)))
     promise.future
   }
 }

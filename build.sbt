@@ -44,6 +44,16 @@ lazy val domainLibrary = project
     ) ++ commonDependencies ++ amqpDependencies
   )
 
+lazy val amqpLibrary = project
+  .in(file("amqp-library"))
+  .settings(
+    organization := "kz.coders",
+    name := "amqp-library",
+    version := "0.1",
+    scalaVersion := sVersion,
+    libraryDependencies ++= akkaDependencies ++ amqpDependencies ++ commonDependencies
+  )
+
 lazy val telegramMicroservice = project
   .in(file("telegram-microservice"))
   .settings(
@@ -55,7 +65,7 @@ lazy val telegramMicroservice = project
       "com.softwaremill.sttp" %% "core" % "1.6.4"
     ) ++ amqpDependencies ++ akkaDependencies ++ commonDependencies
   )
-  .dependsOn(domainLibrary)
+  .dependsOn(domainLibrary, amqpLibrary)
 
 lazy val chatGateway = project
   .in(file("chat-gateway"))
@@ -67,7 +77,7 @@ lazy val chatGateway = project
       "com.google.cloud" % "google-cloud-dialogflow" % "2.1.0"
     ) ++ amqpDependencies ++ akkaDependencies ++ commonDependencies
   )
-  .dependsOn(domainLibrary)
+  .dependsOn(domainLibrary, amqpLibrary)
 
 lazy val httpMicroservice = project
   .in(file("http-microservice"))
@@ -78,4 +88,4 @@ lazy val httpMicroservice = project
     libraryDependencies ++=
       amqpDependencies ++ akkaDependencies ++ commonDependencies
   )
-  .dependsOn(domainLibrary)
+  .dependsOn(domainLibrary, amqpLibrary)

@@ -2,44 +2,28 @@ package kz.coders.chat.gateway.actors
 
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import com.rabbitmq.client.{Channel, MessageProperties}
-import kz.domain.library.messages.UsersMessage
-import org.json4s.DefaultFormats
+import kz.domain.library.messages.{BotResponse, Sender}
 import org.json4s.jackson.Serialization.write
-
 import scala.util.{Failure, Success, Try}
 
 object AmqpPublisherActor {
-  def props(channel: Channel)(implicit system: ActorSystem): Props =
-    Props(new AmqpPublisherActor(channel))
-
-  final case class TelegramChatDetails(
-      username: Option[String],
-      firstname: String,
-      lastname: Option[String],
-      chatId: Long,
-      messageId: Int,
-      userId: Int
-  )
+  def props(channel: Channel, exchangeChatGatewayOut: String)(
+      implicit system: ActorSystem): Props =
+    Props(new AmqpPublisherActor(channel, exchangeChatGatewayOut))
 }
 
-class AmqpPublisherActor(channel: Channel)(implicit system: ActorSystem)
+class AmqpPublisherActor(channel: Channel, exchangeChatGatewayOut: String)(
+    implicit system: ActorSystem)
     extends Actor
-    with ActorLogging {
-  implicit val formats: DefaultFormats.type = DefaultFormats
+    with ActorLogging
+    with Sender {
 
   override def receive: Receive = {
-    case msg: UsersMessage =>
-      log.info(s"sending message to AMQP")
+    case msg: BotResponse =>
+      log.info(s"sending message: $msg to AMQP")
       val jsonMessage: String = write(msg)
 
-      msg.senderPlatform match {
-        case "http" =>
-          publishToX("X:http-microservice", "user.http.message", jsonMessage)
-        case "telegram" =>
-          publishToX("X:telegram-microservice",
-                     "user.chat.message",
-                     jsonMessage)
-      }
+      publishToX(exchangeChatGatewayOut, msg.replyTo, jsonMessage)
   }
 
   def publishToX(exchange: String,

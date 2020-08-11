@@ -2,8 +2,7 @@ package kz.coders.chat.gateway.actors
 
 import java.io.FileInputStream
 import java.util.UUID
-
-import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import com.google.api.gax.core.FixedCredentialsProvider
 import com.google.auth.oauth2.{GoogleCredentials, ServiceAccountCredentials}
 import com.google.cloud.dialogflow.v2.{
@@ -14,17 +13,35 @@ import com.google.cloud.dialogflow.v2.{
   SessionsSettings,
   TextInput
 }
-case class DialogflowResponse(intent: String, response: String)
+import kz.coders.chat.gateway.actors.DataFetcherActor.{
+  GetCNJoke,
+  GetUserAccount,
+  GetWeather
+}
+import kz.domain.library.messages.{BotResponse, UserRequest}
 
-class DialogflowActor extends Actor with ActorLogging {
-  val credentials = GoogleCredentials.fromStream(
-    new FileInputStream(
-      "/home/daniyar/one-tech-telegram-bot-kmyb-08beba509cd1.json"))
+object DialogflowActor {
+  def props(dialogFlowCredentials: String,
+            publisherActor: ActorRef,
+            dataFetcherActor: ActorRef): Props =
+    Props(
+      new DialogflowActor(dialogFlowCredentials,
+                          publisherActor,
+                          dataFetcherActor))
+}
 
-  val projectId =
+class DialogflowActor(dialogFlowCredentials: String,
+                      publisherActor: ActorRef,
+                      dataFetcherActor: ActorRef)
+    extends Actor
+    with ActorLogging {
+  val credentials: GoogleCredentials =
+    GoogleCredentials.fromStream(new FileInputStream(dialogFlowCredentials))
+
+  val projectId: String =
     credentials.asInstanceOf[ServiceAccountCredentials].getProjectId
 
-  val client = SessionsClient
+  val client: SessionsClient = SessionsClient
     .create(
       SessionsSettings
         .newBuilder()
@@ -32,11 +49,10 @@ class DialogflowActor extends Actor with ActorLogging {
         .build()
     )
 
-  val session = SessionName.of(projectId, UUID.randomUUID().toString)
+  val session: SessionName = SessionName.of(projectId, UUID.randomUUID().toString)
 
   override def receive: Receive = {
-    case command: String =>
-      val sender = context.sender()
+    case message: UserRequest =>
       val response = client
         .detectIntent(
           DetectIntentRequest
@@ -47,7 +63,7 @@ class DialogflowActor extends Actor with ActorLogging {
                 .setText(
                   TextInput
                     .newBuilder()
-                    .setText(command)
+                    .setText(message.message.head)
                     .setLanguageCode("RU-RU")
                     .build())
                 .build())
@@ -61,17 +77,25 @@ class DialogflowActor extends Actor with ActorLogging {
           val params = response.getParameters.getFieldsMap
             .get("github-account")
             .getStringValue
-          sender ! DialogflowResponse(response.getIntent.getDisplayName, params)
+          val botResponse =
+            BotResponse(Option(params), message.sender, message.replyTo)
+          dataFetcherActor ! GetUserAccount(botResponse)
         case "Jokes-intent" =>
-          sender ! DialogflowResponse(response.getIntent.getDisplayName, "")
+          val botResponse =
+            BotResponse(Option(""), message.sender, message.replyTo)
+          dataFetcherActor ! GetCNJoke(botResponse)
         case "weather-intent" =>
           val params = response.getParameters.getFieldsMap
             .get("city")
             .getStringValue
-          sender ! DialogflowResponse(response.getIntent.getDisplayName, params)
+          val botResponse =
+            BotResponse(Option(params), message.sender, message.replyTo)
+          dataFetcherActor ! GetWeather(botResponse)
         case _ =>
-          sender ! DialogflowResponse("no-response",
-                                      response.getFulfillmentText)
+          val botResponse = BotResponse(Option(response.getFulfillmentText),
+                                        message.sender,
+                                        message.replyTo)
+          publisherActor ! botResponse
       }
 
   }

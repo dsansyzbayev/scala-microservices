@@ -1,15 +1,16 @@
 package kz.coders.chat.gateway
 
-import akka.actor.{ActorSystem, Props}
+import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.typesafe.config.ConfigFactory
+import kz.amqp.{AmpqConsumer, RabbitMqConnection}
 import kz.coders.chat.gateway.actors.{
   AmqpListenerActor,
   AmqpPublisherActor,
   DataFetcherActor,
   DialogflowActor
 }
-import amqp.{AmpqConsumer, RabbitMqConnection}
+
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
@@ -23,9 +24,13 @@ object Boot extends App {
   val username = config.getString("rabbitmq.username")
   val password = config.getString("rabbitmq.password")
   val virtualHost = config.getString("rabbitmq.virtualHost")
-  val exchangeChatGateway = config.getString("rabbitmq.exchangeChatGateway")
-  val exchangeTelegram = config.getString("rabbitmq.exchangeTelegram")
-  val exchangeHttp = config.getString("rabbitmq.exchangeHttp")
+  val exchangeChatGatewayIn = config.getString("rabbitmq.exchangeChatGatewayIn")
+  val exchangeChatGatewayOut =
+    config.getString("rabbitmq.exchangeChatGatewayOut")
+  val dialogflowCredentials = config.getString("dialogFlow.credentials")
+  val routingKeyIn = config.getString("rabbitmq.routingKeyIn")
+  val routingKeyOut = config.getString("rabbitmq.routingKeyOut")
+  val gatewayQueue = config.getString("rabbitmq.gatewayQueue")
 
   val connection = RabbitMqConnection.getRabbitMqConnection(
     username,
@@ -37,39 +42,29 @@ object Boot extends App {
 
   val channel = connection.createChannel()
 
-  RabbitMqConnection.declareExchange(channel, exchangeChatGateway, "topic") match {
-    case Success(_) => system.log.info("succesfully declared exchange")
-    case Failure(exception) =>
-      system.log.warning(s"couldn't declare exchange ${exception.getMessage}")
-  }
-
-  RabbitMqConnection.declareExchange(channel, exchangeTelegram, "topic") match {
-    case Success(_) => system.log.info("succesfully declared telegram exchange")
-    case Failure(exception) =>
-      system.log.warning(s"couldn't declare exchange ${exception.getMessage}")
-  }
-
-  RabbitMqConnection.declareExchange(channel, exchangeHttp, "topic") match {
-    case Success(_) => system.log.info("succesfully declared http exchange")
+  RabbitMqConnection.declareExchange(channel, exchangeChatGatewayIn, "topic") match {
+    case Success(_) =>
+      system.log.info(s"succesfully declared exchange $exchangeChatGatewayIn")
     case Failure(exception) =>
       system.log.warning(s"couldn't declare exchange ${exception.getMessage}")
   }
 
   RabbitMqConnection.declareAndBindQueue(
     channel,
-    "Q:gateway-queue",
-    "X:chat-gateway",
-    "user.chat.message"
+    gatewayQueue,
+    exchangeChatGatewayIn,
+    routingKeyIn
   )
 
-  val publisherActor = system.actorOf(AmqpPublisherActor.props(channel))
-  val dialogflowActor = system.actorOf(Props(new DialogflowActor()))
-
+  val publisherActor =
+    system.actorOf(AmqpPublisherActor.props(channel, exchangeChatGatewayOut))
   val dataFetcherActor = system.actorOf(DataFetcherActor.props(publisherActor))
-  val listenerActor =
+  val dialogflowActor =
     system.actorOf(
-      AmqpListenerActor
-        .props(publisherActor, dialogflowActor, dataFetcherActor))
-  channel.basicConsume("Q:gateway-queue", AmpqConsumer(listenerActor))
+      DialogflowActor
+        .props(dialogflowCredentials, publisherActor, dataFetcherActor))
+  val listenerActor =
+    system.actorOf(AmqpListenerActor.props(dialogflowActor))
+  channel.basicConsume(gatewayQueue, AmpqConsumer(listenerActor))
 
 }

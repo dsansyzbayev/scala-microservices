@@ -10,22 +10,18 @@ import com.softwaremill.sttp.SttpBackend
 import com.softwaremill.sttp.okhttp.OkHttpFutureBackend
 import cats.instances.future._
 import cats.syntax.functor._
-import kz.domain.library.messages.UsersMessage
+import kz.domain.library.messages.{
+  TelegramChatDetails,
+  TelegramSender,
+  UserRequest
+}
 import org.json4s.DefaultFormats
-import org.json4s.jackson.Serialization.write
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-final case class TelegramChatDetails(
-    username: Option[String],
-    firstname: String,
-    lastname: Option[String],
-    chatId: Long,
-    messageId: Int,
-    userId: Int
-)
-
-class TelegramService(token: String, publisherActor: ActorRef)
+class TelegramService(token: String,
+                      publisherActor: ActorRef,
+                      routingKeyT: String)
     extends TelegramBot
     with Polling
     with Commands[Future] {
@@ -41,7 +37,7 @@ class TelegramService(token: String, publisherActor: ActorRef)
   }
 
   onMessage { implicit msg =>
-    val telegramChatDetails =
+    val telegramChatDetails = {
       TelegramChatDetails(
         msg.from.head.username,
         msg.from.head.firstName,
@@ -50,10 +46,10 @@ class TelegramService(token: String, publisherActor: ActorRef)
         msg.messageId,
         msg.from.head.id
       )
-    publisherActor ! UsersMessage("telegram",
-                                  Option(msg.text.getOrElse("")),
-                                  "",
-                                  write(telegramChatDetails))
+    }
+    val telegramSender = TelegramSender(telegramChatDetails)
+    val request = UserRequest(msg.text, telegramSender, routingKeyT)
+    publisherActor ! request
     Future()
   }
 

@@ -3,12 +3,12 @@ package kz.coders.telegram.actors
 import akka.actor.{Actor, ActorLogging, Props}
 import akka.util.Timeout
 import com.bot4s.telegram.models.{Chat, ChatType, Message, User}
-import kz.coders.telegram.{TelegramChatDetails, TelegramService}
-import kz.domain.library.messages.UsersMessage
+import kz.coders.telegram.TelegramService
+import kz.domain.library.messages.{BotResponse, Sender, TelegramSender}
 import org.json4s.jackson.JsonMethods.parse
-import org.json4s.{DefaultFormats, Formats}
 import cats.instances.future._
 import cats.syntax.functor._
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
@@ -19,18 +19,17 @@ object AmqpListenerActor {
 
 class AmqpListenerActor(telegramService: TelegramService)
     extends Actor
-    with ActorLogging {
-  implicit val formats: Formats = DefaultFormats
+    with ActorLogging with Sender{
   implicit val timeout: Timeout = 5.seconds
   implicit val executionContext: ExecutionContext = context.dispatcher
 
   override def receive: Receive = {
     case msg: String =>
-      val usersMessage = parse(msg).extract[UsersMessage]
-      val senderDetails = parse(usersMessage.args).extract[TelegramChatDetails]
+      val usersMessage = parse(msg).extract[BotResponse]
+      val senderDetails = usersMessage.sender.asInstanceOf[TelegramSender].telegramChatDetails
 
       telegramService
-        .reply(usersMessage.message.head) {
+        .reply(usersMessage.response.head) {
           Message(
             messageId = 1,
             from = Some(

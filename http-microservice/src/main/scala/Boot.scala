@@ -2,11 +2,10 @@ import actors.{AmqpListenerActor, AmqpPublisherActor}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.stream.Materializer
-import amqp.{AmqpConsumer, RabbitMqConnection}
 import com.typesafe.config.ConfigFactory
 import http.routes.AllRoutes
+import kz.amqp.{RabbitMqConnection, AmpqConsumer}
 import org.slf4j.LoggerFactory
-
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
@@ -24,7 +23,12 @@ object Boot extends App {
   val username = config.getString("rabbitmq.username")
   val password = config.getString("rabbitmq.password")
   val virtualHost = config.getString("rabbitmq.virtualHost")
-  val exchangeHttp = config.getString("rabbitmq.exchangeHttp")
+  val exchangeChatGatewayOut =
+    config.getString("rabbitmq.exchangeChatGatewayOut")
+  val exchangeChatGatewayIn = config.getString("rabbitmq.exchangeChatGatewayIn")
+  val httpQueue = config.getString("rabbitmq.httpQueue")
+  val routingKeyIn = config.getString("rabbitmq.routingKeyIn")
+  val routingKeyHttp = config.getString("rabbitmq.routingKeyHttp")
 
   val connection = RabbitMqConnection.getRabbitMqConnection(
     username,
@@ -36,7 +40,7 @@ object Boot extends App {
 
   val channel = connection.createChannel()
 
-  RabbitMqConnection.declareExchange(channel, exchangeHttp, "topic") match {
+  RabbitMqConnection.declareExchange(channel, exchangeChatGatewayOut, "topic") match {
     case Success(_) => system.log.info("successfully declared exchange")
     case Failure(exception) =>
       system.log.warning(s"couldn't declare exchange ${exception.getMessage}")
@@ -44,16 +48,17 @@ object Boot extends App {
 
   RabbitMqConnection.declareAndBindQueue(
     channel,
-    "Q:http-queue",
-    "X:http-microservice",
-    "user.http.message"
+    httpQueue,
+    exchangeChatGatewayOut,
+    routingKeyHttp
   )
 
-  val publisher: ActorRef = system.actorOf(AmqpPublisherActor.props(channel))
+  val publisher: ActorRef = system.actorOf(
+    AmqpPublisherActor.props(channel, exchangeChatGatewayIn, routingKeyIn))
   val listener: ActorRef = system.actorOf(AmqpListenerActor.props())
-  channel.basicConsume("Q:http-queue", AmqpConsumer(listener))
+  channel.basicConsume(httpQueue, AmpqConsumer(listener))
 
-  val allRoutes = new AllRoutes(publisher)
+  val allRoutes = new AllRoutes(publisher, routingKeyHttp)
 
   Http().bindAndHandle(allRoutes.handlers, host, port)
 

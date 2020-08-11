@@ -1,4 +1,4 @@
-package kz.coders.chat.gateway.amqp
+package kz.amqp
 
 import com.rabbitmq.client.AMQP.{Exchange, Queue}
 import com.rabbitmq.client.{Channel, Connection, ConnectionFactory}

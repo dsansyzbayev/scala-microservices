@@ -6,7 +6,6 @@ import kz.coders.chat.gateway.APIs.Githuber.getUserRepositories
 import kz.coders.chat.gateway.APIs.Weather.getWeatherByCity
 import kz.coders.chat.gateway.actors.DataFetcherActor._
 import org.json4s.DefaultFormats
-
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.{Failure, Success}
 

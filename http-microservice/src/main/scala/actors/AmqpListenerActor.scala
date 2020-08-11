@@ -1,10 +1,9 @@
 package actors
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.util.Timeout
-import kz.domain.library.messages.UsersMessage
+import kz.domain.library.messages.{BotResponse, HttpSender, Sender}
 import org.json4s.jackson.JsonMethods.parse
-import org.json4s.{DefaultFormats, Formats}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
@@ -15,16 +14,17 @@ object AmqpListenerActor {
 
 class AmqpListenerActor()(implicit system: ActorSystem)
     extends Actor
-    with ActorLogging {
-  implicit val formats: Formats = DefaultFormats
+    with ActorLogging
+    with Sender {
   implicit val timeout: Timeout = 5.seconds
   implicit val executionContext: ExecutionContext = context.dispatcher
 
   override def receive: Receive = {
     case msg: String =>
       log.info(s"received message $msg")
-      val actorMessage = parse(msg).extract[UsersMessage]
-      val actor = system.actorSelection(actorMessage.args)
-      actor ! actorMessage.message.head
+      val actorMessage = parse(msg).extract[BotResponse]
+      val sender = actorMessage.sender.asInstanceOf[HttpSender]
+      val actor = system.actorSelection(sender.actorPath)
+      actor ! actorMessage.response.head
   }
 }

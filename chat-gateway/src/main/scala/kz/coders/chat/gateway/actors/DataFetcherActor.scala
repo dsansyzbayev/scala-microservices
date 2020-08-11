@@ -3,13 +3,8 @@ package kz.coders.chat.gateway.actors
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import kz.coders.chat.gateway.actors.AmqpPublisherActor.TelegramChatDetails
 import kz.coders.chat.gateway.actors.DataFetcherActor._
-import kz.domain.library.messages.UsersMessage
-import org.json4s.{DefaultFormats, jvalue2extractable}
-import org.json4s.jackson.JsonMethods.parse
-import org.json4s.jackson.Serialization.write
-
+import kz.domain.library.messages.BotResponse
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success}
@@ -18,70 +13,70 @@ object DataFetcherActor {
   def props(publisherActor: ActorRef)(implicit system: ActorSystem): Props =
     Props(new DataFetcherActor(publisherActor))
 
-  case class GetUserAccount(usersMessage: UsersMessage)
+  case class GetUserAccount(botResponse: BotResponse)
   case class GetUser(login: String)
-  case class GetUserRepos(usersMessage: UsersMessage)
+  case class GetUserRepos(botResponse: BotResponse)
   case class GetRepos(login: String)
-  case class GetCNJoke(usersMessage: UsersMessage)
+  case class GetCNJoke(botResponse: BotResponse)
   case class GetJoke()
   case class GetWeatherInCity(city: String)
-  case class GetWeather(usersMessage: UsersMessage)
+  case class GetWeather(botResponse: BotResponse)
 }
 
 class DataFetcherActor(publisherActor: ActorRef)(implicit system: ActorSystem)
     extends Actor {
   implicit val timeout: Timeout = 5.seconds
   implicit val executionContext: ExecutionContext = context.dispatcher
-  implicit val formats: DefaultFormats.type = DefaultFormats
-
   val requestMakerActor: ActorRef =
     system.actorOf(Props(new RequestMakerActor()))
 
   override def receive: Receive = {
     case user: GetUserAccount =>
-      val message = user.usersMessage.message.head
+      val message = user.botResponse.response.head
       (requestMakerActor ? GetRepos(message)).onComplete {
         case Success(value) =>
-          val message = createResponseMessage(user.usersMessage, value.toString)
+          val message =
+            createResponseMessage(user.botResponse, Option(value.toString))
           sendToPublisher(publisherActor, message)
         case Failure(exception) =>
           val message =
-            createResponseMessage(user.usersMessage, exception.getMessage)
+            createResponseMessage(user.botResponse,
+                                  Option(exception.getMessage))
           sendToPublisher(publisherActor, message)
       }
     case joke: GetCNJoke =>
       (requestMakerActor ? GetJoke()).onComplete {
         case Success(value) =>
-          val message = createResponseMessage(joke.usersMessage, value.toString)
+          val message =
+            createResponseMessage(joke.botResponse, Option(value.toString))
           sendToPublisher(publisherActor, message)
         case Failure(exception) =>
           val message =
-            createResponseMessage(joke.usersMessage, exception.getMessage)
+            createResponseMessage(joke.botResponse,
+                                  Option(exception.getMessage))
           sendToPublisher(publisherActor, message)
       }
     case weather: GetWeather =>
-      val city = weather.usersMessage.message.head
+      val city = weather.botResponse.response.head
       (requestMakerActor ? GetWeatherInCity(city)).onComplete {
         case Success(value) =>
           val message =
-            createResponseMessage(weather.usersMessage, value.toString)
+            createResponseMessage(weather.botResponse, Option(value.toString))
           sendToPublisher(publisherActor, message)
         case Failure(exception) =>
           val message =
-            createResponseMessage(weather.usersMessage, exception.getMessage)
+            createResponseMessage(weather.botResponse,
+                                  Option(exception.getMessage))
           sendToPublisher(publisherActor, message)
       }
   }
 
-  def sendToPublisher(publisher: ActorRef, message: UsersMessage): Unit = {
+  def sendToPublisher(publisher: ActorRef, message: BotResponse): Unit = {
     publisher ! message
   }
 
-  def createResponseMessage(usersMessage: UsersMessage,
-                            response: String): UsersMessage = {
-    UsersMessage(usersMessage.senderPlatform,
-                 Option(response),
-                 "",
-                 usersMessage.args)
+  def createResponseMessage(usersMessage: BotResponse,
+                            response: Option[String]): BotResponse = {
+    BotResponse(response, usersMessage.sender, usersMessage.replyTo)
   }
 }

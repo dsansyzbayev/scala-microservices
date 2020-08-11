@@ -1,13 +1,14 @@
-package kz.coders.telegram.amqp
+package kz.amqp
 
 import akka.actor.ActorRef
 import com.rabbitmq.client.{AMQP, Consumer, Envelope, ShutdownSignalException}
 
-object AmqpConsumer {
-  def apply(ref: ActorRef): AmqpConsumer = new AmqpConsumer(ref)
+object AmpqConsumer {
+  def apply(ref: ActorRef): AmpqConsumer =
+    new AmpqConsumer(ref)
 }
 
-class AmqpConsumer(ref: ActorRef) extends Consumer {
+class AmpqConsumer(ref: ActorRef) extends Consumer {
   override def handleConsumeOk(consumerTag: String): Unit = ()
 
   override def handleCancelOk(consumerTag: String): Unit = ()
