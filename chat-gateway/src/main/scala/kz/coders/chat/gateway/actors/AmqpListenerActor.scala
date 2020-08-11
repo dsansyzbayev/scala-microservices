@@ -2,8 +2,9 @@ package kz.coders.chat.gateway.actors
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.util.Timeout
-import kz.domain.library.messages.{Sender, UserRequest}
+import kz.domain.library.messages.{Sender, SenderSerializers, UserRequest}
 import org.json4s.jackson.JsonMethods.parse
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
@@ -15,7 +16,7 @@ object AmqpListenerActor {
 class AmqpListenerActor(dialogflowActor: ActorRef)(implicit system: ActorSystem)
     extends Actor
     with ActorLogging
-    with Sender {
+    with SenderSerializers {
   implicit val timeout: Timeout = 5.seconds
   implicit val executionContext: ExecutionContext = context.dispatcher
 

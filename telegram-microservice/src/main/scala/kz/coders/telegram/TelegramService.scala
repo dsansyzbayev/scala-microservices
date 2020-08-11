@@ -10,12 +10,10 @@ import com.softwaremill.sttp.SttpBackend
 import com.softwaremill.sttp.okhttp.OkHttpFutureBackend
 import cats.instances.future._
 import cats.syntax.functor._
-import kz.domain.library.messages.{
-  TelegramChatDetails,
-  TelegramSender,
-  UserRequest
-}
+import com.bot4s.telegram.models.{Chat, ChatType, Message, User}
+import kz.domain.library.messages.{TelegramChatDetails, TelegramSender, UserRequest}
 import org.json4s.DefaultFormats
+
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -51,6 +49,33 @@ class TelegramService(token: String,
     val request = UserRequest(msg.text, telegramSender, routingKeyT)
     publisherActor ! request
     Future()
+  }
+
+  def replyToUser(response: String, senderDetails: TelegramChatDetails): Unit = {
+    reply(response) {
+      Message(
+        messageId = 1,
+        from = Some(
+          User(
+            senderDetails.userId,
+            isBot = false,
+            senderDetails.firstname,
+            senderDetails.lastname,
+            senderDetails.username,
+            Some("ru")
+          )
+        ),
+        date = 1,
+        chat = Chat(
+          id = senderDetails.chatId,
+          `type` = ChatType.Private,
+          username = senderDetails.username,
+          firstName = Some(senderDetails.firstname),
+          lastName = senderDetails.lastname
+        )
+      )
+    }
+      .void
   }
 
 }

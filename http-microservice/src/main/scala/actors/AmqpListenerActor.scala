@@ -2,8 +2,9 @@ package actors
 
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.util.Timeout
-import kz.domain.library.messages.{BotResponse, HttpSender, Sender}
+import kz.domain.library.messages.{BotResponse, HttpSender, SenderSerializers}
 import org.json4s.jackson.JsonMethods.parse
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
@@ -15,7 +16,7 @@ object AmqpListenerActor {
 class AmqpListenerActor()(implicit system: ActorSystem)
     extends Actor
     with ActorLogging
-    with Sender {
+    with SenderSerializers {
   implicit val timeout: Timeout = 5.seconds
   implicit val executionContext: ExecutionContext = context.dispatcher
 

@@ -13,13 +13,14 @@ object DataFetcherActor {
   def props(publisherActor: ActorRef)(implicit system: ActorSystem): Props =
     Props(new DataFetcherActor(publisherActor))
 
+  trait DataRequest
   case class GetUserAccount(botResponse: BotResponse)
-  case class GetUser(login: String)
+  case class GetUser(login: String) extends DataRequest
   case class GetUserRepos(botResponse: BotResponse)
-  case class GetRepos(login: String)
+  case class GetRepos(login: String) extends DataRequest
   case class GetCNJoke(botResponse: BotResponse)
-  case class GetJoke()
-  case class GetWeatherInCity(city: String)
+  case class GetJoke() extends DataRequest
+  case class GetWeatherInCity(city: String) extends DataRequest
   case class GetWeather(botResponse: BotResponse)
 }
 
@@ -32,47 +33,29 @@ class DataFetcherActor(publisherActor: ActorRef)(implicit system: ActorSystem)
 
   override def receive: Receive = {
     case user: GetUserAccount =>
-      val message = user.botResponse.response.head
-      (requestMakerActor ? GetRepos(message)).onComplete {
-        case Success(value) =>
-          val message =
-            createResponseMessage(user.botResponse, Option(value.toString))
-          sendToPublisher(publisherActor, message)
-        case Failure(exception) =>
-          val message =
-            createResponseMessage(user.botResponse,
-                                  Option(exception.getMessage))
-          sendToPublisher(publisherActor, message)
-      }
+      fetchData(requestMakerActor,
+                GetRepos(user.botResponse.response.getOrElse("")),
+                user.botResponse)
     case joke: GetCNJoke =>
-      (requestMakerActor ? GetJoke()).onComplete {
-        case Success(value) =>
-          val message =
-            createResponseMessage(joke.botResponse, Option(value.toString))
-          sendToPublisher(publisherActor, message)
-        case Failure(exception) =>
-          val message =
-            createResponseMessage(joke.botResponse,
-                                  Option(exception.getMessage))
-          sendToPublisher(publisherActor, message)
-      }
+      fetchData(requestMakerActor, GetJoke(), joke.botResponse)
     case weather: GetWeather =>
-      val city = weather.botResponse.response.head
-      (requestMakerActor ? GetWeatherInCity(city)).onComplete {
-        case Success(value) =>
-          val message =
-            createResponseMessage(weather.botResponse, Option(value.toString))
-          sendToPublisher(publisherActor, message)
-        case Failure(exception) =>
-          val message =
-            createResponseMessage(weather.botResponse,
-                                  Option(exception.getMessage))
-          sendToPublisher(publisherActor, message)
-      }
+      fetchData(requestMakerActor,
+                GetWeatherInCity(weather.botResponse.response.getOrElse("")),
+                weather.botResponse)
   }
 
-  def sendToPublisher(publisher: ActorRef, message: BotResponse): Unit = {
-    publisher ! message
+  def fetchData(requestMakerActor: ActorRef,
+                dataRequest: DataRequest,
+                response: BotResponse): Unit = {
+    (requestMakerActor ? dataRequest).onComplete {
+      case Success(value) =>
+        val message = createResponseMessage(response, Option(value.toString))
+        publisherActor ! message
+      case Failure(exception) =>
+        val message =
+          createResponseMessage(response, Option(exception.getMessage))
+        publisherActor ! message
+    }
   }
 
   def createResponseMessage(usersMessage: BotResponse,

@@ -2,8 +2,9 @@ package kz.coders.chat.gateway.actors
 
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import com.rabbitmq.client.{Channel, MessageProperties}
-import kz.domain.library.messages.{BotResponse, Sender}
+import kz.domain.library.messages.{BotResponse, Sender, SenderSerializers}
 import org.json4s.jackson.Serialization.write
+
 import scala.util.{Failure, Success, Try}
 
 object AmqpPublisherActor {
@@ -16,7 +17,7 @@ class AmqpPublisherActor(channel: Channel, exchangeChatGatewayOut: String)(
     implicit system: ActorSystem)
     extends Actor
     with ActorLogging
-    with Sender {
+    with SenderSerializers {
 
   override def receive: Receive = {
     case msg: BotResponse =>

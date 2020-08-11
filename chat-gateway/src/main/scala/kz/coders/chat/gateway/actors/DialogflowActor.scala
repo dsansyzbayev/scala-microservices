@@ -63,7 +63,7 @@ class DialogflowActor(dialogFlowCredentials: String,
                 .setText(
                   TextInput
                     .newBuilder()
-                    .setText(message.message.head)
+                    .setText(message.message.getOrElse(""))
                     .setLanguageCode("RU-RU")
                     .build())
                 .build())

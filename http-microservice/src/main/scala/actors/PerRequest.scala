@@ -37,8 +37,6 @@ trait PerRequest extends Actor with ActorLogging with Json4sSupport {
   val promise: Promise[RouteResult]
   val requestContext: RequestContext
 
-  log.warning(s"received request actor ${self.path.name}")
-
   override def receive: Receive = {
     case obj: String =>
       populateResponse(obj)

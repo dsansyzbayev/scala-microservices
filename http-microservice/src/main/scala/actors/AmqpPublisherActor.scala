@@ -2,7 +2,7 @@ package actors
 
 import akka.actor.{Actor, ActorLogging, Props}
 import com.rabbitmq.client.{Channel, MessageProperties}
-import kz.domain.library.messages.{Sender, UserRequest}
+import kz.domain.library.messages.{SenderSerializers, UserRequest}
 import org.json4s.jackson.Serialization.write
 
 import scala.util.{Failure, Success, Try}
@@ -20,7 +20,7 @@ class AmqpPublisherActor(channel: Channel,
                          routingKeyIn: String)
     extends Actor
     with ActorLogging
-    with Sender {
+    with SenderSerializers {
 
   override def receive: Receive = {
     case msg: UserRequest =>
