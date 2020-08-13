@@ -6,7 +6,7 @@
         </encoder>
     </appender>
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>target/telegram-microservice.log</file>
+        <file>target/chat-gateway.log</file>
         <encoder>
             <pattern>%date{ISO8601} %-5level %logger{36} %X{akkaSource} - %msg%n</pattern>
         </encoder>
@@ -17,13 +17,15 @@
         <appender-ref ref="FILE"/>
     </root>
 
+    <logger name="com.google.cloud" level="WARN" />
     <logger name="akka.io.SimpleDnsManager" level="INFO" />
     <logger name="akka.actor.LocalActorRefProvider" level="WARN" />
     <logger name="akka.serialization" level="WARN" />
     <logger name="akka.io.TcpListener" level="WARN" />
     <logger name="spray.can.server" level="WARN" />
-    <logger name="io.netty" level="WARN" />
-    <logger name="netty" level="WARN" />
+    <logger name="io.netty" level="INFO" />
+    <logger name="io.grpc.netty" level="INFO"/>
+    <logger name="netty" level="INFO" />
     <logger name="akka.stream.impl" level="WARN" />
     <logger name="akka.io.TcpOutgoingConnection" level="WARN" />
     <logger name="akka.http.impl.engine.client" level="WARN" />
